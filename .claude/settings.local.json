@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node -e \"const fs = require\\(''fs''\\); try { const data = JSON.parse\\(fs.readFileSync\\(''C:/Users/daiga/OneDrive/Escritorio/PROGRAMACIÓN/IA/repo_git/gastos_BOTijo/Gastos_Clasificación_CLEAN.json'', ''utf8''\\)\\); console.log\\(''Valid JSON''\\); console.log\\(''Nodes count:'', data.nodes.length\\); console.log\\(''Connection keys:'', Object.keys\\(data.connections\\).length\\); console.log\\(''Node names:'', data.nodes.map\\(n => n.name + '' ['' + n.type + '']''\\).join\\(''\\\\n''\\)\\); } catch\\(e\\) { console.error\\(''INVALID JSON:'', e.message\\); }\")",
+      "Bash(node -e \"const fs = require\\(''fs''\\); const text = fs.readFileSync\\(''C:/Users/daiga/OneDrive/Escritorio/PROGRAMACIÓN/IA/repo_git/gastos_BOTijo/Gastos_Clasificación_CLEAN.json'', ''utf8''\\); try { JSON.parse\\(text\\); } catch\\(e\\) { console.log\\(''Error at position:'', e.message\\); const pos = parseInt\\(e.message.match\\(/position \\(\\\\d+\\)/\\)?.[1]\\); if\\(pos\\) { console.log\\(''Context:'', JSON.stringify\\(text.slice\\(Math.max\\(0,pos-100\\), pos+100\\)\\)\\); } }\")",
+      "Bash(node -e \":*)",
+      "Bash(py --version)",
+      "Bash(py -c \":*)"
+    ]
+  }
+}
