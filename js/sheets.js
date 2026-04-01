@@ -1,6 +1,6 @@
-import { SPREADSHEET_ID, API_BASE, SHEETS, TX_COL, BK_COL } from './config.js';
+import { SPREADSHEET_ID, API_BASE, SHEETS, TX_COL, BK_COL, BH_COL } from './config.js';
 import { getToken } from './auth.js';
-import { setTransactions, setBudgets, setSheetMeta } from './state.js';
+import { setTransactions, setBudgets, setSheetMeta, setBudgetHistory } from './state.js';
 
 // =========================================================
 // Carga inicial
@@ -20,7 +20,7 @@ export async function loadSheetMeta() {
 
 /** Carga todas las hojas de datos en paralelo */
 export async function loadAll() {
-  await Promise.all([loadTransactions(), loadBudgetKeys()]);
+  await Promise.all([loadTransactions(), loadBudgetKeys(), loadBudgetHistory()]);
 }
 
 /** Carga TRANSACTIONS y actualiza state */
@@ -62,6 +62,126 @@ export async function loadBudgetKeys() {
     });
   }
   setBudgets(budgets);
+}
+
+/** Carga BUDGET_HISTORY completo y actualiza state */
+export async function loadBudgetHistory() {
+  const range = `${SHEETS.BUDGET_HISTORY}!A:H`;
+  let data;
+  try {
+    data = await _apiFetch(
+      `${API_BASE}/${SPREADSHEET_ID}/values/${encodeURIComponent(range)}`
+    );
+  } catch (err) {
+    if (err.status === 400 || err.status === 404) {
+      setBudgetHistory([]);
+      return;
+    }
+    throw err;
+  }
+  const rows = data.values ?? [];
+  const history = [];
+  for (let i = 1; i < rows.length; i++) {
+    const row = rows[i];
+    if (!row[BH_COL.MONTH] || !row[BH_COL.BUDGET_KEY]) continue;
+    history.push({
+      month:         String(row[BH_COL.MONTH]).trim(),
+      budgetKey:     String(row[BH_COL.BUDGET_KEY]).trim(),
+      type:          String(row[BH_COL.TYPE] ?? '').trim(),
+      monthlyBudget: _parseNumber(row[BH_COL.MONTHLY_BUDGET]),
+      fixedAmount:   _parseNumber(row[BH_COL.FIXED_AMOUNT]),
+      dueDay:        _parseNumber(row[BH_COL.DUE_DAY]),
+      spent:         _parseNumber(row[BH_COL.SPENT]),
+      snapshotTs:    String(row[BH_COL.SNAPSHOT_TS] ?? '').trim(),
+    });
+  }
+  setBudgetHistory(history);
+}
+
+/**
+ * Upsert del snapshot de presupuesto para el mes indicado.
+ * Actualiza filas existentes y hace append de las nuevas.
+ * @param {string} month
+ * @param {Budget[]} budgets
+ * @param {Map<string,number>} spendMap
+ */
+export async function saveBudgetSnapshot(month, budgets, spendMap) {
+  if (!budgets || budgets.length === 0) return;
+  const snapshotTs = new Date().toLocaleString('sv-SE', { timeZone: 'Europe/Madrid' }).replace(' ', 'T');
+
+  // 1. Leer filas existentes para conocer los rowIndex reales
+  const range = `${SHEETS.BUDGET_HISTORY}!A:H`;
+  let existingData;
+  try {
+    existingData = await _apiFetch(
+      `${API_BASE}/${SPREADSHEET_ID}/values/${encodeURIComponent(range)}`
+    );
+  } catch (err) {
+    if (err.status === 400 || err.status === 404) {
+      existingData = { values: [] };
+    } else {
+      throw err;
+    }
+  }
+
+  const existingRows = existingData.values ?? [];
+  // Mapa: `${month}||${budgetKey}` → número de fila en Sheets (1-based)
+  const existingMap = new Map();
+  for (let i = 1; i < existingRows.length; i++) {
+    const row = existingRows[i];
+    const rowMonth     = String(row[BH_COL.MONTH]      ?? '').trim();
+    const rowBudgetKey = String(row[BH_COL.BUDGET_KEY] ?? '').trim();
+    if (rowMonth && rowBudgetKey) {
+      existingMap.set(`${rowMonth}||${rowBudgetKey}`, i + 1);
+    }
+  }
+
+  // 2. Clasificar en update o insert
+  const toUpdate = [];
+  const toInsert = [];
+  for (const b of budgets) {
+    const key = `${month}||${b.budgetKey}`;
+    const spent = Math.round((spendMap.get(b.budgetKey) ?? 0) * 100) / 100;
+    const rowValues = [
+      month,
+      b.budgetKey,
+      b.type,
+      b.monthlyBudget,
+      b.fixedAmount,
+      b.dueDay,
+      spent,
+      snapshotTs,
+    ];
+    if (existingMap.has(key)) {
+      toUpdate.push({ sheetRow: existingMap.get(key), values: rowValues });
+    } else {
+      toInsert.push(rowValues);
+    }
+  }
+
+  // 3. Ejecutar updates en una sola llamada batchUpdate
+  if (toUpdate.length > 0) {
+    const data = toUpdate.map(({ sheetRow, values }) => ({
+      range:  `${SHEETS.BUDGET_HISTORY}!A${sheetRow}:H${sheetRow}`,
+      values: [values],
+    }));
+    await _apiFetch(
+      `${API_BASE}/${SPREADSHEET_ID}/values:batchUpdate`,
+      { method: 'POST', body: JSON.stringify({ valueInputOption: 'RAW', data }) }
+    );
+  }
+
+  // 4. Ejecutar inserts en una sola llamada append
+  if (toInsert.length > 0) {
+    const appendRange = `${SHEETS.BUDGET_HISTORY}!A:H`;
+    await _apiFetch(
+      `${API_BASE}/${SPREADSHEET_ID}/values/${encodeURIComponent(appendRange)}:append?valueInputOption=RAW&insertDataOption=INSERT_ROWS`,
+      { method: 'POST', body: JSON.stringify({ values: toInsert }) }
+    );
+  }
+
+  // 5. Refrescar state local
+  await loadBudgetHistory();
 }
 
 // =========================================================

@@ -9,9 +9,10 @@ export const OAUTH_CLIENT_ID  = 'YOUR_OAUTH_CLIENT_ID.apps.googleusercontent.com
 export const SCOPES = 'https://www.googleapis.com/auth/spreadsheets';
 
 export const SHEETS = {
-  TRANSACTIONS: 'TRANSACTIONS',
-  BUDGET_KEYS:  'BUDGET_KEYS',
-  MERCHANT_MAP: 'MERCHANT_MAP',
+  TRANSACTIONS:   'TRANSACTIONS',
+  BUDGET_KEYS:    'BUDGET_KEYS',
+  MERCHANT_MAP:   'MERCHANT_MAP',
+  BUDGET_HISTORY: 'BUDGET_HISTORY',
 };
 
 // Índices de columna en la hoja TRANSACTIONS (0-based)
@@ -43,6 +44,19 @@ export const BK_COL = {
   FIXED_AMOUNT:   3,
   DUE_DAY:        4,
   ACTIVE:         5,
+};
+
+// Índices de columna en BUDGET_HISTORY (0-based)
+// month | budget_key | type | monthly_budget | fixed_amount | due_day | spent | snapshot_ts
+export const BH_COL = {
+  MONTH:          0,
+  BUDGET_KEY:     1,
+  TYPE:           2,
+  MONTHLY_BUDGET: 3,
+  FIXED_AMOUNT:   4,
+  DUE_DAY:        5,
+  SPENT:          6,
+  SNAPSHOT_TS:    7,
 };
 
 export const API_BASE = 'https://sheets.googleapis.com/v4/spreadsheets';

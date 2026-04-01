@@ -2,6 +2,9 @@ import * as state from '../state.js';
 import { getCategoryColor } from '../utils/colors.js';
 import { formatCurrency, calcPercent } from '../utils/formatters.js';
 import { el, show, hide } from '../utils/dom.js';
+import { saveBudgetSnapshot } from '../sheets.js';
+
+let _lastSnapshotMonth = null;
 
 // =========================================================
 // Render
@@ -15,7 +18,17 @@ export function render() {
 
   const month    = state.currentMonth;
   const spendMap = state.getSpendByCategory(month);
-  const budgets  = state.budgets;
+  const budgets  = state.getBudgetKeysForMonth(month);
+
+  const _now = new Date();
+  const _thisMonth = `${_now.getFullYear()}-${String(_now.getMonth() + 1).padStart(2, '0')}`;
+  if (month === _thisMonth && budgets.length > 0 && _lastSnapshotMonth !== month) {
+    _lastSnapshotMonth = month;
+    saveBudgetSnapshot(month, budgets, spendMap).catch(err => {
+      console.warn('[BudgetHistory] No se pudo guardar snapshot:', err.message);
+      _lastSnapshotMonth = null;
+    });
+  }
 
   if (budgets.length === 0) {
     totalCard.replaceChildren();

@@ -10,6 +10,9 @@ export let transactions = [];
 /** @type {Budget[]} */
 export let budgets = [];
 
+/** @type {Array} */
+export let budgetHistory = [];
+
 /** @type {Object.<string, number>} sheetName → numeric sheetId */
 export let sheetMeta = {};
 
@@ -23,7 +26,29 @@ export let currentMonth = _thisMonth();
 export function setTransactions(rows) { transactions = rows; }
 export function setBudgets(rows)      { budgets = rows; }
 export function setSheetMeta(meta)    { sheetMeta = meta; }
+export function setBudgetHistory(rows) { budgetHistory = rows; }
 export function setCurrentMonth(m)    { currentMonth = m; }
+
+/**
+ * Devuelve los budget keys a usar para un mes dado.
+ * - Mes actual → state.budgets (BUDGET_KEYS activos en vivo)
+ * - Mes pasado con histórico → datos de budgetHistory para ese mes
+ * - Mes pasado sin histórico → fallback a state.budgets
+ */
+export function getBudgetKeysForMonth(month) {
+  const now = new Date();
+  const thisMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  if (month >= thisMonth) return budgets;
+  const historyRows = budgetHistory.filter(r => r.month === month);
+  if (historyRows.length === 0) return budgets;
+  return historyRows.map(r => ({
+    budgetKey:     r.budgetKey,
+    type:          r.type,
+    monthlyBudget: r.monthlyBudget,
+    fixedAmount:   r.fixedAmount,
+    dueDay:        r.dueDay,
+  }));
+}
 
 // =========================================================
 // Queries derivadas (sin caché — siempre calculan en fresco)
