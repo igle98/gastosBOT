@@ -758,3 +758,70 @@ option {
 .bottom-nav {
   padding-bottom: env(safe-area-inset-bottom);
 }
+
+/* =========================================================
+   Responsive: tablet (768px+)
+   ========================================================= */
+@media (min-width: 768px) {
+  .budgets-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  /* Section labels span both budget columns */
+  .budget-section-label {
+    grid-column: 1 / -1;
+  }
+
+  .chart-wrapper {
+    height: 260px;
+  }
+
+  .chart-wrapper-donut {
+    height: 300px;
+  }
+
+  /* Modal: centered dialog instead of bottom sheet */
+  .modal-overlay {
+    align-items: center;
+    padding: var(--space-6);
+  }
+
+  .modal-box {
+    border-radius: var(--radius-xl);
+    max-width: 480px;
+    animation: fade-scale var(--transition-normal) ease;
+  }
+
+  .toast {
+    bottom: var(--space-8);
+  }
+}
+
+@keyframes fade-scale {
+  from { opacity: 0; transform: scale(0.96); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+/* =========================================================
+   Responsive: desktop (1024px+)
+   ========================================================= */
+@media (min-width: 1024px) {
+  .chart-wrapper {
+    height: 300px;
+  }
+
+  .chart-wrapper-donut {
+    height: 360px;
+  }
+
+  /* Toast: no bottom nav, position from bottom of screen */
+  .toast {
+    bottom: var(--space-6);
+  }
+
+  /* Filters: don't stretch too wide on large screens */
+  .view-filters {
+    max-width: 440px;
+  }
+}

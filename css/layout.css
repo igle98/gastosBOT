@@ -214,16 +214,25 @@ body {
 }
 
 /* =========================================================
-   Responsive: tablet / desktop
+   Responsive: tablet (768px+)
    ========================================================= */
-@media (min-width: 600px) {
+@media (min-width: 768px) {
   .screen-app {
+    max-width: 680px;
     border-left: 1px solid var(--border);
     border-right: 1px solid var(--border);
     box-shadow: var(--shadow-lg);
   }
+
+  .view {
+    padding: var(--space-6);
+    gap: var(--space-5);
+  }
 }
 
+/* =========================================================
+   Responsive: desktop (1024px+)
+   ========================================================= */
 @media (min-width: 1024px) {
   body {
     background: var(--bg-secondary);
@@ -240,7 +249,57 @@ body {
 
   .screen-app {
     height: calc(100dvh - var(--space-8) * 2);
+    max-width: 1100px;
     border-radius: var(--radius-xl);
     overflow: hidden;
+    border-left: none;
+    border-right: none;
+    /* Sidebar layout */
+    grid-template-columns: var(--sidebar-width) 1fr;
+    grid-template-rows: var(--header-height) 1fr;
+    grid-template-areas:
+      "nav header"
+      "nav main";
+  }
+
+  /* Sidebar nav */
+  .bottom-nav {
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: flex-start;
+    border-top: none;
+    border-right: 1px solid var(--border);
+    padding: var(--space-5) var(--space-3);
+    padding-bottom: var(--space-5); /* override env(safe-area-inset-bottom) */
+    gap: var(--space-1);
+    height: 100%;
+  }
+
+  .nav-btn {
+    flex-direction: row;
+    justify-content: flex-start;
+    gap: var(--space-3);
+    padding: var(--space-3) var(--space-4);
+    border-radius: var(--radius-lg);
+    font-size: var(--text-sm);
+    flex: 0 0 auto;
+  }
+
+  .nav-btn.active {
+    background: var(--accent-dim);
+  }
+
+  .nav-btn:hover:not(.active),
+  .nav-btn:focus-visible:not(.active) {
+    background: var(--bg-card-alt);
+  }
+
+  .nav-btn:active svg {
+    transform: none;
+  }
+
+  .view {
+    padding: var(--space-6) var(--space-8);
+    gap: var(--space-6);
   }
 }
