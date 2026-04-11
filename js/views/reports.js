@@ -56,11 +56,10 @@ function _sectionWeek() {
 // =========================================================
 
 function _sectionComparison(month, prevMonth) {
-  const spendCurrent  = state.getSpendByCategory(month);
-  const spendPrev     = state.getSpendByCategory(prevMonth);
+  const spendCurrent = state.getSpendByCategory(month);
+  const spendPrev    = state.getSpendByCategory(prevMonth);
 
-  // Unión de todas las categorías presentes en ambos meses
-  const allKeys = [...new Set([...spendCurrent.keys(), ...spendPrev.keys()])].sort();
+  const allKeys = [...new Set([...spendCurrent.keys(), ...spendPrev.keys()])];
 
   if (allKeys.length === 0) {
     return el('div', { class: 'report-section' },
@@ -69,41 +68,61 @@ function _sectionComparison(month, prevMonth) {
     );
   }
 
-  const rows = allKeys.map(key => {
+  // Clasificar por delta: sube / baja / igual
+  const up    = [];
+  const down  = [];
+  const equal = [];
+
+  for (const key of allKeys) {
     const curr  = spendCurrent.get(key) ?? 0;
     const prev  = spendPrev.get(key)    ?? 0;
     const delta = curr - prev;
-    const color = getCategoryColor(key);
+    const entry = { key, curr, delta };
+    if (delta > 0.01)       up.push(entry);
+    else if (delta < -0.01) down.push(entry);
+    else                    equal.push(entry);
+  }
 
-    const deltaEl = _deltaChip(delta);
+  // Ordenar: subidas de mayor a menor (peores primero), bajadas de mayor ahorro primero
+  up.sort((a, b) => b.delta - a.delta);
+  down.sort((a, b) => a.delta - b.delta);
+  equal.sort((a, b) => a.key.localeCompare(b.key));
 
-    return el('div', { class: 'compare-row' },
-      el('div', { class: 'compare-category', style: { color } }, key),
+  const makeRows = items => items.map(({ key, curr, delta }) =>
+    el('div', { class: 'compare-row' },
+      el('div', { class: 'compare-category', style: { color: getCategoryColor(key) } }, key),
       el('div', { class: 'compare-amount' }, curr > 0 ? formatCurrency(curr) : '—'),
-      deltaEl,
-    );
-  });
-
-  // Totales del mes
-  const totalCurr = [...spendCurrent.values()].reduce((s, v) => s + v, 0);
-  const totalPrev = [...spendPrev.values()].reduce((s, v)  => s + v, 0);
-  const totalDelta = totalCurr - totalPrev;
-
-  const totalRow = el('div', {
-    class: 'compare-row',
-    style: { borderTop: '1px solid var(--border)', marginTop: 'var(--space-2)', paddingTop: 'var(--space-2)', fontWeight: '600' },
-  },
-    el('div', { class: 'compare-category', style: { color: 'var(--text-primary)' } }, 'TOTAL'),
-    el('div', { class: 'compare-amount', style: { color: 'var(--text-primary)' } }, formatCurrency(totalCurr)),
-    _deltaChip(totalDelta),
+      _deltaChip(delta),
+    )
   );
 
+  const makeCol = (items, header, mod) => {
+    const rows = items.length > 0
+      ? makeRows(items)
+      : [el('p', { class: 'compare-col-empty' }, '—')];
+    return el('div', { class: `compare-col compare-col-${mod}` },
+      el('div', { class: 'compare-col-header' }, header),
+      ...rows,
+    );
+  };
+
+  // Totales
+  const totalCurr  = [...spendCurrent.values()].reduce((s, v) => s + v, 0);
+  const totalPrev  = [...spendPrev.values()].reduce((s, v)  => s + v, 0);
+  const totalDelta = totalCurr - totalPrev;
+
   return el('div', { class: 'report-section' },
-    el('div', { class: 'report-section-title' },
-      `${formatMonth(month)} vs ${formatMonth(prevMonth)}`,
+    el('div', { class: 'report-section-title' }, `${formatMonth(month)} vs ${formatMonth(prevMonth)}`),
+    el('div', { class: 'compare-columns' },
+      makeCol(up,    '↑ Más gasto', 'up'),
+      makeCol(down,  '↓ Menos gasto', 'down'),
+      makeCol(equal, '= Sin cambio', 'eq'),
     ),
-    ...rows,
-    totalRow,
+    el('div', { class: 'compare-total-row' },
+      el('div', { class: 'compare-category' }, 'TOTAL'),
+      el('div', { class: 'compare-amount' }, formatCurrency(totalCurr)),
+      _deltaChip(totalDelta),
+    ),
   );
 }
 
