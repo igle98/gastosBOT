@@ -1,123 +1,117 @@
 # GastosBOTijo
 
-App web de gestión de gastos personales conectada a Google Sheets. Desplegada en GitHub Pages como PWA instalable.
+> App web de gestión de gastos personales, sin backend propio, instalable como PWA y desplegada en GitHub Pages.
+
+GastosBOTijo es una aplicación de finanzas personales que usa **Google Sheets como base de datos** y se autentica directamente contra la API de Google desde el navegador. No hay servidor intermedio: todo el código es estático y se ejecuta en el cliente.
+
+El proyecto nace para resolver un caso real: registrar gastos rápidamente desde el móvil (vía un bot de Telegram que escribe en la hoja) y poder consultarlos en una interfaz cómoda con presupuestos, reportes y gráficas.
 
 ---
 
-## Cómo subir la app a GitHub Pages (primera vez)
+## Demo
 
-### Paso 1 — Averigua la URL que tendrá tu app
-
-La URL de GitHub Pages sigue siempre este formato:
-```
-https://TU-USUARIO.github.io/NOMBRE-DEL-REPOSITORIO/
-```
-
-Para saber cuál es la tuya, entra en tu repositorio en GitHub y fíjate en la URL del navegador:
-```
-https://github.com/TU-USUARIO/NOMBRE-DEL-REPOSITORIO
-```
-Esos dos datos (usuario y nombre del repo) son los que necesitas.
+🔗 **Demo en vivo:** *pendiente de publicar en GitHub Pages*
 
 ---
 
-### Paso 2 — Añade la URL de GitHub Pages en Google Cloud Console
+## Características
 
-Antes de subir nada, tienes que decirle a Google que tu app también puede hacer login desde esa URL.
+- **PWA instalable** en Android e iOS, con service worker y soporte offline para la shell de la app.
+- **Autenticación con Google OAuth 2.0** (Google Identity Services) directamente desde el navegador.
+- **Lectura/escritura sobre Google Sheets** usando la API REST v4 sin librerías intermedias.
+- **4 vistas principales:**
+  - Transacciones del mes con filtro por categoría.
+  - Presupuestos mensuales con progreso por categoría y total agregado.
+  - Reportes comparativos entre meses.
+  - Gráficas (evolución 6 meses + distribución por categoría) con Chart.js.
+- **Selector de mes** que permite navegar histórico (incluye snapshots de presupuestos pasados).
+- **Diseño responsive** móvil → tablet → escritorio (layout de 3 columnas en pantallas grandes).
+- **Tema oscuro** con sistema de variables CSS.
 
-1. Ve a [console.cloud.google.com](https://console.cloud.google.com)
-2. Menú → **APIs y servicios** → **Credenciales**
-3. Haz clic en tu cliente OAuth (el que creaste para esta app)
-4. En **Orígenes de JavaScript autorizados**, añade:
+---
+
+## Stack técnico
+
+| Capa | Tecnología |
+|------|-----------|
+| Frontend | Vanilla JavaScript (ES Modules), sin framework |
+| Estilos | CSS puro con custom properties y arquitectura por capas (`reset` → `variables` → `layout` → `components`) |
+| Datos | Google Sheets API v4 |
+| Auth | Google Identity Services (OAuth 2.0 implicit flow) |
+| Gráficas | Chart.js 4 (vía CDN) |
+| PWA | Manifest + Service Worker |
+| Hosting | GitHub Pages |
+
+**Decisión de diseño clave:** cero dependencias `npm`, cero build step. El proyecto se sirve tal cual desde GitHub Pages y se puede abrir con un Live Server en local. Esto simplifica el despliegue y mantiene el repo legible.
+
+---
+
+## Estructura del proyecto
+
+```
+.
+├── index.html              # Shell de la app, todas las vistas
+├── manifest.json           # PWA manifest
+├── sw.js                   # Service worker (cache de la shell)
+├── css/
+│   ├── reset.css
+│   ├── variables.css       # Tokens de diseño (colores, espaciado, breakpoints)
+│   ├── layout.css          # Grid, header, bottom-nav, responsive
+│   └── components.css      # Cards, botones, listas, gráficos
+├── js/
+│   ├── app.js              # Entry point, router de vistas
+│   ├── auth.js             # OAuth flow con GIS
+│   ├── sheets.js           # Cliente de Google Sheets API
+│   ├── state.js            # Estado global (mes actual, datos cacheados)
+│   ├── config.js           # IDs de hoja y OAuth (rellenar con tus valores)
+│   ├── utils/              # Formateadores, colores, helpers DOM
+│   └── views/              # Renderizado de cada pestaña
+│       ├── transactions.js
+│       ├── budgets.js
+│       ├── reports.js
+│       └── charts.js
+└── icons/                  # Iconos PWA
+```
+
+El modelo de datos vive en 4 hojas de cálculo: `TRANSACTIONS`, `BUDGET_KEYS`, `MERCHANT_MAP` y `BUDGET_HISTORY`. Los índices de columna están centralizados en [`js/config.js`](js/config.js) para que cambiar la estructura de la hoja sea un único punto de edición.
+
+---
+
+## Configuración
+
+Para ejecutar tu propia instancia necesitas:
+
+1. **Una hoja de Google Sheets** con las pestañas `TRANSACTIONS`, `BUDGET_KEYS`, `MERCHANT_MAP` y `BUDGET_HISTORY` (ver índices de columna en [`js/config.js`](js/config.js)).
+2. **Un OAuth Client ID** creado en [Google Cloud Console](https://console.cloud.google.com) (tipo *Web application*), con tu origen autorizado:
+   - `http://127.0.0.1:5500` para desarrollo local.
+   - `https://TU-USUARIO.github.io` para producción en GitHub Pages.
+3. Rellenar en [`js/config.js`](js/config.js):
+   ```js
+   export const SPREADSHEET_ID  = 'tu-spreadsheet-id';
+   export const OAUTH_CLIENT_ID = 'tu-client-id.apps.googleusercontent.com';
    ```
-   https://TU-USUARIO.github.io
-   ```
-   (solo el dominio, sin la ruta del repositorio)
-5. Haz clic en **Guardar**
-
-> Los cambios en Google Cloud pueden tardar hasta 5 minutos en aplicarse.
 
 ---
 
-### Paso 3 — Sube los archivos con Git GUI
+## Ejecutar en local
 
-1. Abre **Git GUI** en la carpeta del proyecto
-2. Pulsa **Rescan** (o F5) para ver los archivos modificados
-3. Haz clic en **Stage Changed** para preparar todos los cambios
-4. En el campo **Commit Message** escribe algo como: `Primera versión`
-5. Pulsa **Commit**
-6. Pulsa **Push** (menú Remote → Push o botón Push)
-7. Confirma y espera a que termine
+No hay build. Cualquier servidor estático sirve — recomendado **Live Server** de VS Code:
+
+1. Abre la carpeta en VS Code.
+2. Botón **Go Live** en la barra inferior.
+3. App disponible en `http://127.0.0.1:5500`.
 
 ---
 
-### Paso 4 — Activa GitHub Pages en tu repositorio
+## Desplegar en GitHub Pages
 
-1. Ve a tu repositorio en [github.com](https://github.com)
-2. Haz clic en **Settings** (pestaña de arriba a la derecha)
-3. En el menú lateral izquierdo, haz clic en **Pages**
-4. En **Source**, selecciona:
-   - Branch: `main`
-   - Carpeta: `/ (root)`
-5. Haz clic en **Save**
-
-GitHub te mostrará un mensaje con tu URL:
-```
-Your site is live at https://TU-USUARIO.github.io/NOMBRE-DEL-REPOSITORIO/
-```
-
-> Puede tardar 1-2 minutos en estar disponible la primera vez.
+1. Push del repo a GitHub.
+2. **Settings → Pages → Source:** branch `main`, carpeta `/ (root)`.
+3. Añadir el origen `https://TU-USUARIO.github.io` en los **Orígenes autorizados** del OAuth Client en Google Cloud Console.
+4. La app queda en `https://TU-USUARIO.github.io/NOMBRE-DEL-REPO/`.
 
 ---
 
-### Paso 5 — Abre la app y comprueba que funciona
+## Licencia
 
-Entra en la URL de GitHub Pages desde el navegador. Si el login no funciona, espera unos minutos más a que Google aplique el cambio del origen autorizado.
-
----
-
-## Cómo actualizar la app (cuando hagas cambios)
-
-Cada vez que modifiques algo y quieras que se refleje en la web:
-
-1. Abre **Git GUI**
-2. **Rescan** → **Stage Changed**
-3. Escribe un mensaje de commit → **Commit** → **Push**
-
-GitHub Pages se actualiza automáticamente en ~2 minutos tras el push.
-
----
-
-## Probar en local (durante el desarrollo)
-
-Usa la extensión **Live Server** de VS Code: botón "Go Live" en la barra inferior.
-
-La app local estará en `http://127.0.0.1:5500` — asegúrate de que ese origen también está en los Orígenes autorizados de Google Cloud Console.
-
----
-
-## Instalar como app en el móvil (PWA)
-
-Una vez la app esté en GitHub Pages:
-
-**Android (Chrome):**
-1. Abre la URL en Chrome
-2. Menú (⋮) → "Añadir a pantalla de inicio"
-3. Confirma
-
-**iOS (Safari):**
-1. Abre la URL en Safari
-2. Botón compartir (□↑) → "Añadir a pantalla de inicio"
-3. Confirma
-
----
-
-## Solución de problemas
-
-| Problema | Solución |
-|----------|----------|
-| Login falla en GitHub Pages | Añade `https://TU-USUARIO.github.io` en Orígenes autorizados de Google Cloud Console |
-| Login falla en local | Añade `http://127.0.0.1:5500` en Orígenes autorizados |
-| No aparecen datos | Revisa que el Spreadsheet ID y OAuth Client ID en `js/config.js` son correctos |
-| Los datos no se actualizan tras un push | Espera 2 min o abre DevTools → Application → Service Workers → "Update" |
-| Error 401 persistente | Cierra sesión y vuelve a entrar |
+Proyecto personal de aprendizaje. Úsalo libremente como referencia.

@@ -1,0 +1,23 @@
+# Editor / IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Claude Code
+.claude/
+
+# OS
+.DS_Store
+Thumbs.db
+ehthumbs.db
+desktop.ini
+
+# Logs
+*.log
+npm-debug.log*
+
+# Configuración local (con credenciales reales)
+js/config.local.js
+.env
+.env.local
